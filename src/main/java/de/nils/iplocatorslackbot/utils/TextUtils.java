@@ -1,5 +1,6 @@
 package de.nils.iplocatorslackbot.utils;
 
+import java.util.Iterator;
 import java.util.List;
 
 public class TextUtils {
@@ -16,8 +17,21 @@ public class TextUtils {
     }
 
     public static String hostnames(List<String> list) {
-        return (list == null || list.isEmpty())
-                ? "n/a"
-                : String.join("\n", list);
+        if (list == null || list.isEmpty()) {
+            return "n/a";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        Iterator<String> it = list.iterator();
+
+        while (it.hasNext()) {
+            String hostname = it.next();
+            sb.append("• ").append(hostname);
+            if (it.hasNext()) {
+                sb.append("\n");
+            }
+        }
+
+        return sb.toString();
     }
 }

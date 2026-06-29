@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 
 import static com.slack.api.model.block.Blocks.asBlocks;
 import static com.slack.api.model.block.Blocks.section;
@@ -43,31 +44,42 @@ public class IpLookupCommand extends BotCommand {
             return context.ack();
         }
 
-        IPData ipData = apiRequestService.getIpData(ip);
+        String finalIp = ip;
 
-        context.respond(r -> r
-            .blocks(asBlocks(
-                section(s -> s.text(markdownText("*IP Lookup* for`" + ipData.getIp() + "`"))),
-                section(s -> s.fields(Arrays.asList(
-                    markdownText("*Network (CIDR)*\n" + TextUtils.na(ipData.getNetwork())),
-                    markdownText("*ASN*\n" + TextUtils.na(ipData.getAsn())),
-                    markdownText("*Organization*\n" + TextUtils.na(ipData.getOrganization())),
-                    markdownText("*Continent*\n" + TextUtils.na(ipData.getContinent())),
-                    markdownText("*Country*\n" + TextUtils.na(ipData.getCountry())),
-                    markdownText("*Region*\n" + TextUtils.na(ipData.getRegion()))
-                ))),
-                section(s -> s.fields(Arrays.asList(
-                    markdownText("*City*\n" + TextUtils.na(ipData.getCity())),
-                    markdownText("*Postal Code*\n" + TextUtils.na(ipData.getPostalCode())),
-                    markdownText("*Timezone*\n" + TextUtils.na(ipData.getTimezone())),
-                    markdownText("*Coordinates*\n" + TextUtils.coords(ipData.getLatitude(), ipData.getLongitude())),
-                    markdownText("*Accuracy*\n" + TextUtils.na(ipData.getAccuracy()))
-                ))),
-                section(s -> s.fields(Arrays.asList(
-                    markdownText("*Hostnames*\n" + TextUtils.hostnames(ipData.getHostnames()))
-                )))
-            ))
-        );
+        CompletableFuture.runAsync(() -> {
+            try {
+                context.respond("Fetching IP data for `" + finalIp + "`...");
+
+                IPData ipData = apiRequestService.getIpData(finalIp);
+
+                context.respond(r -> r
+                        .blocks(asBlocks(
+                                section(s -> s.text(markdownText("*IP Lookup*\n`" + ipData.getIp() + "`"))),
+                                section(s -> s.fields(Arrays.asList(
+                                        markdownText("*Network (CIDR)*\n" + TextUtils.na(ipData.getNetwork())),
+                                        markdownText("*ASN*\n" + TextUtils.na(ipData.getAsn())),
+                                        markdownText("*Organization*\n" + TextUtils.na(ipData.getOrganization())),
+                                        markdownText("*Continent*\n" + TextUtils.na(ipData.getContinent())),
+                                        markdownText("*Country*\n" + TextUtils.na(ipData.getCountry())),
+                                        markdownText("*Region*\n" + TextUtils.na(ipData.getRegion()))
+                                ))),
+                                section(s -> s.fields(Arrays.asList(
+                                        markdownText("*City*\n" + TextUtils.na(ipData.getCity())),
+                                        markdownText("*Postal Code*\n" + TextUtils.na(ipData.getPostalCode())),
+                                        markdownText("*Timezone*\n" + TextUtils.na(ipData.getTimezone())),
+                                        markdownText("*Coordinates*\n" + TextUtils.coords(ipData.getLatitude(), ipData.getLongitude())),
+                                        markdownText("*Accuracy*\n" + TextUtils.na(ipData.getAccuracy()))
+                                ))),
+                                section(s -> s.fields(Arrays.asList(
+                                        markdownText("*Hostnames*\n" + TextUtils.hostnames(ipData.getHostnames()))
+                                )))
+                        ))
+                );
+
+            } catch (IOException e) {
+                log.error("Failed to respond: ", e);
+            }
+        }, getExecutor());
 
         return context.ack();
     }
