@@ -1,6 +1,11 @@
 package de.nils.iplocatorslackbot.services;
 
+import com.google.gson.Gson;
 import de.nils.iplocatorslackbot.common.Const;
+import de.nils.iplocatorslackbot.daos.ASNData;
+import de.nils.iplocatorslackbot.daos.DomainData;
+import de.nils.iplocatorslackbot.daos.IPData;
+import de.nils.iplocatorslackbot.daos.TLDData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,21 +18,30 @@ import java.net.http.HttpResponse;
 
 public class ApiRequestService {
     private final static Logger log = LoggerFactory.getLogger(ApiRequestService.class);
+    private final Gson gson;
 
-    public String getIpData(String ip) {
-        return sendHTTPRequest(Const.API.IP_API_URL + ip);
+    public ApiRequestService() {
+        gson = new Gson();
     }
 
-    public String getAsnData(int asn) {
-        return sendHTTPRequest(Const.API.ASN_API_URL + asn);
+    public IPData getIpData(String ip) {
+        String json = sendHTTPRequest(Const.API.IP_API_URL + ip);
+        return gson.fromJson(json, IPData.class);
     }
 
-    public String getDomainData(String domain) {
-        return sendHTTPRequest(Const.API.DOMAIN_API_URL + domain);
+    public ASNData getAsnData(int asn) {
+        String json = sendHTTPRequest(Const.API.ASN_API_URL + asn);
+        return gson.fromJson(json, ASNData.class);
     }
 
-    public String getTldData(String tld) {
-        return sendHTTPRequest(Const.API.TLD_API_URL + tld);
+    public DomainData getDomainData(String domain) {
+        String json = sendHTTPRequest(Const.API.DOMAIN_API_URL + domain);
+        return gson.fromJson(json, DomainData.class);
+    }
+
+    public TLDData getTldData(String tld) {
+        String json = sendHTTPRequest(Const.API.TLD_API_URL + tld);
+        return gson.fromJson(json, TLDData.class);
     }
 
     private String sendHTTPRequest(String uri) {
