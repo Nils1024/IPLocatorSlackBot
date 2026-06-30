@@ -1,5 +1,5 @@
 # IPLocatorSlackBot
-Slackbot for getting information about IP-Addresses, Domains, ASNs and TLDs using my own IP Location API: https://github.com/Nils1024/IPLocatorSlackBot 
+Slackbot for getting information about IP-Addresses, Domains, ASNs and TLDs using my own IP Location API: https://github.com/Nils1024/IPLocatorAPI
 
 ### Commands
 - /ipl-help
