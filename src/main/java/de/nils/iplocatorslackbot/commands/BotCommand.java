@@ -42,7 +42,14 @@ public abstract class BotCommand {
     }
 
     public Response executeBotCommand(SlashCommandRequest request, SlashCommandContext context) {
-        log.info("Command <{}> executed", command);
+        log.info("Command <{}> executed by <{}/{}> in Team <{}/{}>, Channel <{}/{}>",
+                command,
+                request.getPayload().getUserName(),
+                request.getPayload().getUserId(),
+                request.getPayload().getTeamDomain(),
+                request.getPayload().getTeamId(),
+                request.getPayload().getChannelName(),
+                request.getPayload().getChannelId());
         try {
             return execute(request, context);
         } catch (IOException e) {

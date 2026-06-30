@@ -24,34 +24,35 @@ public class ApiRequestService {
         gson = new Gson();
     }
 
-    public IPData getIpData(String ip) {
-        String json = sendHTTPRequest(Const.API.IP_API_URL + ip);
-        return gson.fromJson(json, IPData.class);
+    public ApiResponse<IPData> getIpData(String ip) {
+        ApiResponse<String> apiResponse = sendHTTPRequest(Const.API.IP_API_URL + ip);
+        return new ApiResponse<>(apiResponse.statusCode(), gson.fromJson(apiResponse.body(), IPData.class));
     }
 
-    public ASNData getAsnData(int asn) {
-        String json = sendHTTPRequest(Const.API.ASN_API_URL + asn);
-        return gson.fromJson(json, ASNData.class);
+    public ApiResponse<ASNData> getAsnData(String asn) {
+        ApiResponse<String> apiResponse = sendHTTPRequest(Const.API.ASN_API_URL + asn);
+        return new ApiResponse<>(apiResponse.statusCode(), gson.fromJson(apiResponse.body(), ASNData.class));
     }
 
-    public DomainData getDomainData(String domain) {
-        String json = sendHTTPRequest(Const.API.DOMAIN_API_URL + domain);
-        return gson.fromJson(json, DomainData.class);
+    public ApiResponse<DomainData> getDomainData(String domain) {
+        ApiResponse<String> apiResponse = sendHTTPRequest(Const.API.DOMAIN_API_URL + domain);
+        return new ApiResponse<>(apiResponse.statusCode(), gson.fromJson(apiResponse.body(), DomainData.class));
     }
 
-    public TLDData getTldData(String tld) {
-        String json = sendHTTPRequest(Const.API.TLD_API_URL + tld);
-        return gson.fromJson(json, TLDData.class);
+    public ApiResponse<TLDData> getTldData(String tld) {
+        ApiResponse<String> apiResponse = sendHTTPRequest(Const.API.TLD_API_URL + tld);
+        return new ApiResponse<>(apiResponse.statusCode(), gson.fromJson(apiResponse.body(), TLDData.class));
     }
 
-    private String sendHTTPRequest(String uri) {
+    private ApiResponse<String> sendHTTPRequest(String uri) {
         try(HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()) {
             HttpRequest request = HttpRequest.newBuilder(new URI(uri)).GET().build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-            return response.body();
+            return new ApiResponse<>(response.statusCode(), response.body());
         } catch (URISyntaxException | IOException | InterruptedException e) {
-            throw new RuntimeException(e);
+            log.error("Error while making HTTP Request to <{}>: ", uri, e);
+            return new ApiResponse<>(0, "{}");
         }
     }
 }

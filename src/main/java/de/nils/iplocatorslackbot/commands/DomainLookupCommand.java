@@ -5,8 +5,10 @@ import com.slack.api.bolt.context.builtin.SlashCommandContext;
 import com.slack.api.bolt.request.builtin.SlashCommandRequest;
 import com.slack.api.bolt.response.Response;
 import de.nils.iplocatorslackbot.common.Const;
+import de.nils.iplocatorslackbot.daos.DomainData;
 import de.nils.iplocatorslackbot.daos.IPData;
 import de.nils.iplocatorslackbot.services.ApiRequestService;
+import de.nils.iplocatorslackbot.services.ApiResponse;
 import de.nils.iplocatorslackbot.utils.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,51 +35,51 @@ public class DomainLookupCommand extends BotCommand {
         String domain = request.getPayload().getText();
 
         if(domain == null || domain.isBlank()) {
-            context.respond("Please enter an IP");
+            context.respond("Please enter a Domain");
             return context.ack();
         }
 
         domain = domain.trim();
-
-        if(!InetAddresses.isInetAddress(domain)) {
-            context.respond("Invalid IP: " + domain);
-            return context.ack();
-        }
-
-        String finalIp = domain;
+        String finalDomain = domain;
 
         CompletableFuture.runAsync(() -> {
             try {
-                context.respond("Fetching IP data for `" + finalIp + "`...");
+                context.respond("Fetching domain data for `" + finalDomain + "`...");
 
-                IPData ipData = apiRequestService.getIpData(finalIp);
+                ApiResponse<DomainData> domainDataRequest = apiRequestService.getDomainData(finalDomain);
 
-                context.respond(r -> r
-                        .blocks(asBlocks(
-                                section(s -> s.text(markdownText("*IP Lookup*\n`" + ipData.getIp() + "`"))),
-                                section(s -> s.fields(Arrays.asList(
-                                        markdownText("*Network (CIDR)*\n" + TextUtils.na(ipData.getNetwork())),
-                                        markdownText("*ASN*\n" + TextUtils.na(ipData.getAsn())),
-                                        markdownText("*Organization*\n" + TextUtils.na(ipData.getOrganization())),
-                                        markdownText("*Continent*\n" + TextUtils.na(ipData.getContinent())),
-                                        markdownText("*Country*\n" + TextUtils.na(ipData.getCountry())),
-                                        markdownText("*Region*\n" + TextUtils.na(ipData.getRegion()))
-                                ))),
-                                section(s -> s.fields(Arrays.asList(
-                                        markdownText("*City*\n" + TextUtils.na(ipData.getCity())),
-                                        markdownText("*Postal Code*\n" + TextUtils.na(ipData.getPostalCode())),
-                                        markdownText("*Timezone*\n" + TextUtils.na(ipData.getTimezone())),
-                                        markdownText("*Coordinates*\n" + TextUtils.coords(ipData.getLatitude(), ipData.getLongitude())),
-                                        markdownText("*Accuracy*\n" + TextUtils.na(ipData.getAccuracy()))
-                                ))),
-                                section(s -> s.fields(Arrays.asList(
-                                        markdownText("*Hostnames*\n" + TextUtils.hostnames(ipData.getHostnames()))
-                                )))
-                        ))
-                );
+                if(domainDataRequest.statusCode() != 200) {
+                    context.respond("Failed to fetch data: HTTP " + domainDataRequest.statusCode());
+                    return;
+                }
+
+                DomainData domainData = domainDataRequest.body();
+                IPData ipData = domainData.getIpData();
+
+                context.respond(r -> r.blocks(asBlocks(
+                        section(s -> s.text(markdownText("*Domain Lookup*\n`" + domainData.getDomain() + "`"))),
+                        section(s -> s.fields(Arrays.asList(
+                                markdownText("*Resolved IP*\n" + TextUtils.na(ipData.getIp())),
+                                markdownText("*Network (CIDR)*\n" + TextUtils.na(ipData.getNetwork())),
+                                markdownText("*ASN*\n" + TextUtils.na(ipData.getAsn())),
+                                markdownText("*Organization*\n" + TextUtils.na(ipData.getOrganization()))
+                        ))),
+                        section(s -> s.fields(Arrays.asList(
+                                markdownText("*Country*\n" + TextUtils.na(ipData.getCountry())),
+                                markdownText("*Region*\n" + TextUtils.na(ipData.getRegion())),
+                                markdownText("*City*\n" + TextUtils.na(ipData.getCity())),
+                                markdownText("*Timezone*\n" + TextUtils.na(ipData.getTimezone()))
+                        ))),
+                        section(s -> s.fields(Arrays.asList(
+                                markdownText("*Coordinates*\n" + TextUtils.coords(ipData.getLatitude(), ipData.getLongitude())),
+                                markdownText("*Hostnames*\n" + TextUtils.hostnames(ipData.getHostnames()))
+                        )))
+
+                        //section(s -> s.text(markdownText("*DNS Records*\n" + TextUtils.hostnames(domainData.getRecords()))))
+                )));
 
             } catch (IOException e) {
-                log.error("Failed to respond: ", e);
+                log.error("Failed to respond", e);
             }
         }, getExecutor());
 

@@ -7,12 +7,14 @@ import com.slack.api.bolt.response.Response;
 import de.nils.iplocatorslackbot.common.Const;
 import de.nils.iplocatorslackbot.daos.IPData;
 import de.nils.iplocatorslackbot.services.ApiRequestService;
+import de.nils.iplocatorslackbot.services.ApiResponse;
 import de.nils.iplocatorslackbot.utils.TextUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 
 import static com.slack.api.model.block.Blocks.asBlocks;
@@ -38,19 +40,20 @@ public class IpLookupCommand extends BotCommand {
         }
 
         ip = ip.trim();
-
-        if(!InetAddresses.isInetAddress(ip)) {
-            context.respond("Invalid IP: " + ip);
-            return context.ack();
-        }
-
         String finalIp = ip;
 
         CompletableFuture.runAsync(() -> {
             try {
                 context.respond("Fetching IP data for `" + finalIp + "`...");
 
-                IPData ipData = apiRequestService.getIpData(finalIp);
+                ApiResponse<IPData> ipDataRequest = apiRequestService.getIpData(finalIp);
+
+                if(ipDataRequest.statusCode() != 200) {
+                    context.respond("Failed to fetch data: HTTP " + ipDataRequest.statusCode());
+                    return;
+                }
+
+                IPData ipData = ipDataRequest.body();
 
                 context.respond(r -> r
                         .blocks(asBlocks(
@@ -70,7 +73,7 @@ public class IpLookupCommand extends BotCommand {
                                         markdownText("*Coordinates*\n" + TextUtils.coords(ipData.getLatitude(), ipData.getLongitude())),
                                         markdownText("*Accuracy*\n" + TextUtils.na(ipData.getAccuracy()))
                                 ))),
-                                section(s -> s.fields(Arrays.asList(
+                                section(s -> s.fields(Collections.singletonList(
                                         markdownText("*Hostnames*\n" + TextUtils.hostnames(ipData.getHostnames()))
                                 )))
                         ))
